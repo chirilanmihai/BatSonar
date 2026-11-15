@@ -23,7 +23,8 @@ lid_t = 2;
 // ---------------- HC-SR04 ----------------
 eye_x   = 13;     // transducer centre = +/-13 (26 mm spacing)
 eye_y   = 56;
-eye_d   = 17.5;   // transducers are 16 mm; 0.75 mm play each side
+eye_d   = 16.5;   // transducers are 16 mm; 0.25 mm play each side
+eye_bevel = 2;    // 45 deg slant: eye_d + 2*eye_bevel wide on the face, eye_d at the inside
 sr_w    = 45;     // PCB 45 x 20
 sr_h    = 20;
 sr_front_z = 8;   // PCB front face depth -> transducers stick out ~4 mm
@@ -97,10 +98,10 @@ module body() {
                  [nano_x + nano_w/2 - 3, nano_x + nano_w/2 + 1.6]])
         translate([xr[0], 1, 1]) cube([xr[1] - xr[0], nano_y + pcb_t + 2.4 - 1, nano_front + 2.5 - 1]);
     }
-    // eyes: through holes + shallow "eye socket" on the face
-    for (sx = [-1, 1]) translate([sx * eye_x, eye_y, -1]) {
-      cylinder(d = eye_d, h = 20);
-      cylinder(d = 23, h = 1.8);
+    // eyes: through hole + 45 deg slanted "eye socket" (no overhang when printed face down)
+    for (sx = [-1, 1]) translate([sx * eye_x, eye_y, 0]) {
+      translate([0, 0, -1]) cylinder(d = eye_d, h = 20);
+      translate([0, 0, -1]) cylinder(d1 = eye_d + 2*eye_bevel + 2, d2 = eye_d, h = eye_bevel + 1);
     }
     // ear detail (recessed 0.8 mm)
     for (s = [-1, 1]) translate([0, 0, -1]) linear_extrude(1.8) ear_inner2d(s);
@@ -217,7 +218,7 @@ if (part == "assembly") {
 }
 if (part == "body")  body();
 if (part == "clamp") translate([0, 0, sr_front_z + pcb_t + 6]) mirror([0, 0, 1]) clamp();   // flat side down
-if (part == "lid")   translate([0, 0, D + lid_t]) mirror([0, 0, 1]) lid();                   // outer face down
+if (part == "lid")   translate([0, 0, D + lid_t]) rotate([0, 180, 0]) lid();  // outer face down (rotated, NOT mirrored)
 if (part == "wing_shell_R") wing_shell();
 if (part == "wing_shell_L") mirror([1, 0, 0]) wing_shell();
 if (part == "wing_back_R")  translate([0, 0, wing_d]) mirror([0, 0, 1]) wing_back();
