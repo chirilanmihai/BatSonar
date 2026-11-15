@@ -8,7 +8,7 @@
 |---|---|---|
 | Arduino Nano v3 (mini USB) | 1 | Wires are soldered on. Works with or without header pins. |
 | HC-SR04 | 1 | The HC-SR04P (3–5.5 V) has the same size and also works. |
-| WS2812B strip, 60 LED/m | **10 LEDs** | Cut **two pieces of 5 LEDs** (about 83 mm each). |
+| RGBW NeoPixel strip (SK6812, separate white chip), 60 LED/m | **10 LEDs** | Cut **two pieces of 5 LEDs** (about 83 mm each). For a plain RGB strip, set `PIXEL_TYPE` to `NEO_GRB` in the sketch. |
 | Buzzer, 12 mm round | 1 | Passive is best. Active also works (set one line in the code). |
 | Resistor 330 Ω | 2 | One in each LED data line. |
 | Resistor 150 Ω | 1 | Only for a passive buzzer. |
@@ -90,7 +90,7 @@ What it does:
 | 1.1 m → 25 cm | yellow → red, brighter | faster chirps, higher pitch |
 | < 25 cm | bright red | rapid chirps |
 
-Each chirp sends a ripple of light from the body out to the wing tips. If nothing moves for 20 s (for example the bat faces a sofa), it goes back to resting and stays quiet.
+Each chirp sends a ripple of light with a white sparkle from the body out to the wing tips. `RIPPLE_WHITE` sets how bright the sparkle is; 0 turns it off. If red and green look swapped, change `PIXEL_TYPE` to `NEO_RGBW`. If nothing moves for 20 s (for example the bat faces a sofa), it goes back to resting and stays quiet.
 
 Everything you can tune is at the top of the sketch: `FAR_CM`, `NEAR_CM`, `BEEP_SLOW_MS`, `BEEP_FAST_MS`, pitches, brightness, `STILL_TIMEOUT_MS`, and `SOUND_ENABLED`.
 

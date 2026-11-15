@@ -1,7 +1,7 @@
 /*
   The Bat That Sees With Sound
   ----------------------------
-  Arduino Nano v3 (ATmega328P) + HC-SR04 + 2 x 5 WS2812B NeoPixels (60 LED/m) + buzzer
+  Arduino Nano v3 (ATmega328P) + HC-SR04 + 2 x 5 RGBW NeoPixels (SK6812, 60 LED/m) + buzzer
 
   Far away   : wings breathe softly in green, silent ("the bat is resting")
   Coming in  : wings go green -> yellow -> red, chirps get faster and higher
@@ -51,7 +51,12 @@
 #define MEASURE_EVERY_MS 60   // HC-SR04 needs >= 60 ms between pings
 #define ECHO_TIMEOUT_US  15000UL // ~2.5 m; no echo = nobody there
 
-Adafruit_NeoPixel wing(LEDS_PER_WING, LED_PIN, NEO_GRB + NEO_KHZ800);
+// RGBW strip (SK6812, separate white chip). If red and green look swapped, use NEO_RGBW.
+// For a plain RGB strip (WS2812B) use NEO_GRB.
+#define PIXEL_TYPE     (NEO_GRBW + NEO_KHZ800)
+#define RIPPLE_WHITE   60     // white chip flash on each chirp (0 = off)
+
+Adafruit_NeoPixel wing(LEDS_PER_WING, LED_PIN, PIXEL_TYPE);
 
 // ---------------- state ----------------
 int   lastReadings[3] = {999, 999, 999};
@@ -196,12 +201,17 @@ void loop() {
 
   for (uint8_t i = 0; i < LEDS_PER_WING; i++) {
     uint16_t level = base;
+    uint8_t white = 0;
     if (rippleActive && !resting) {
       long dt = (long)(now - rippleStart) - (long)i * 30;     // ripple: body -> wing tip
-      if (dt >= 0 && dt < 140) level += (uint16_t)(100 * (1.0 - dt / 140.0));
+      if (dt >= 0 && dt < 140) {
+        float k = 1.0 - dt / 140.0;
+        level += (uint16_t)(100 * k);
+        white = (uint8_t)(RIPPLE_WHITE * k);                   // white sparkle on the wave front
+      }
     }
     if (level > 255) level = 255;
-    wing.setPixelColor(i, wing.Color((r * level) >> 8, (g * level) >> 8, (b * level) >> 8));
+    wing.setPixelColor(i, wing.Color((r * level) >> 8, (g * level) >> 8, (b * level) >> 8, white));
   }
   if (rippleActive && now - rippleStart > 140 + LEDS_PER_WING * 30) rippleActive = false;
   wing.show();
