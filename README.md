@@ -1,6 +1,67 @@
-# The Bat That Sees With Sound: build guide
+# The Bat That Sees With Sound
 
 ![front](cad/preview_front.png)
+
+A 3D-printed bat for children. Its "eyes" are an HC-SR04 ultrasonic sensor. As a child walks toward it, the glowing wings go **green → yellow → red** and the bat chirps faster and higher, like a real bat using echoes to find its way.
+
+Hardware: Arduino Nano v3 (mini USB), HC-SR04, 2 × 5 RGBW NeoPixels (60 LED/m), 12 mm buzzer. Powered only by the mini-USB cable.
+
+## How it behaves
+
+### At power-up
+1. **Strip test (4 s):** the whole strip shows red, green, blue, then white, 1 second each, so you can check the strip type (see [Software](#6-software)). Set `STRIP_TEST 0` to skip it.
+2. **"Hello" animation:** the light runs out to the wing tips three times, first green, then yellow, then red, with three rising chirps.
+3. Then the bat starts **resting**.
+
+### Resting (nobody around)
+- The wings **breathe slowly in green**: dim, a little brighter, dim again, over 4 seconds.
+- **No sound.**
+- It rests when nothing is closer than **2 m**. The sensor sees up to about 2.5 m, so anything further away counts as nobody there.
+
+### Someone approaching
+Both wings always show the same thing. As the child gets closer, the colour, brightness, chirp speed and chirp pitch all change smoothly together:
+
+| Distance | Colour | Brightness | Time between chirps | Pitch |
+|---|---|---|---|---|
+| just under 2 m | green | 70 | 0.9 s | 1800 Hz (low) |
+| 1.5 m | yellow-green | 93 | 0.67 s | 2370 Hz |
+| **1.1 m** | **yellow** | 110 | 0.49 s | 2800 Hz |
+| 75 cm | orange | 127 | 0.32 s | 3230 Hz |
+| 40 cm | red-orange | 143 | 0.16 s | 3630 Hz |
+| **25 cm or less** | **red** | 150 | 0.09 s (about 11 chirps per second) | 3800 Hz (high) |
+
+Brightness runs from 0 to 255; the code stops at 150 so the USB supply isn't overloaded. Each chirp is a short 35 ms "tsk". With an active buzzer the pitch doesn't change, only the speed.
+
+### The light ripple
+Every chirp sends a **wave of light from the body out to the wing tips**. Each LED flashes brighter for a moment, one after the other, 30 ms apart, with a small **white sparkle** from the white chip. It looks like the sound flying out of the bat. Far away the ripples are slow and calm; up close they come so fast the wings seem to flicker.
+
+### Ignoring things that don't move
+If the distance stays within **8 cm** for **20 seconds**, the bat decides it's looking at furniture or a wall. It goes quiet and back to green breathing. As soon as something moves more than 8 cm, it wakes up again. A child who stands perfectly still in front of it for 20 s also sends it back to "sleep", so moving wakes it, which can become part of the game.
+
+### Smoothing the readings
+- The sensor measures about **16 times per second**.
+- Each reading is the middle value of the last three, which throws away odd one-off echoes.
+- That value is then smoothed, so the colour glides instead of jumping.
+- When someone first appears, or leaves the 2 m range, the bat reacts **immediately**, with no fade.
+
+### What you can tune
+All of these are at the top of [BatSonar.ino](BatSonar.ino):
+
+| Setting | Now | What it changes |
+|---|---|---|
+| `FAR_CM` / `NEAR_CM` | 200 / 25 | Where reacting starts / where it's fully red |
+| `BEEP_SLOW_MS` / `BEEP_FAST_MS` | 900 / 90 | Chirp speed far away / close up |
+| `PITCH_LOW_HZ` / `PITCH_HIGH_HZ` | 1800 / 3800 | Chirp pitch range |
+| `CHIRP_MS` | 35 | Length of each chirp |
+| `BRIGHT_MIN` / `BRIGHT_MAX` / `BRIGHT_IDLE_MAX` | 70 / 150 / 40 | Brightness (keep the max at 200 or less) |
+| `RIPPLE_WHITE` | 60 | White sparkle strength (0 = off) |
+| `STILL_TIMEOUT_MS` / `STILL_BAND_CM` | 20 s / 8 cm | When it decides nothing is moving |
+| `SOUND_ENABLED` | 1 | 0 = lights only, silent bat |
+| `STRIP_TEST` | 1 | 0 = skip the R/G/B/W test at power-up |
+
+---
+
+# Build guide
 
 ## 1. Parts
 
@@ -81,18 +142,17 @@ Sizes: body 70 × 102 (with ears) × 52 mm deep; wingspan about 294 mm.
 4. If you have an **active** buzzer, set `#define BUZZER_PASSIVE 0`.
    - How to tell: connect the buzzer to 5V and GND for a moment. If it beeps on its own, it is active. If it only clicks, it is passive. Passive ones usually show a green circuit board underneath; active ones are sealed with black resin.
 
-What it does:
+5. **Check the strip type.** At power-up the strip shows red, green, blue, then white, 1 second each. The Serial Monitor (9600 baud) prints which colour should be showing.
 
-| Child distance | Lights | Sound |
-|---|---|---|
-| > 2 m or nobody | soft green "breathing" | silent |
-| 2 m → 1.1 m | green → yellow | slow chirps, low pitch |
-| 1.1 m → 25 cm | yellow → red, brighter | faster chirps, higher pitch |
-| < 25 cm | bright red | rapid chirps |
+   | You see | Meaning | What to change |
+   |---|---|---|
+   | red, green, blue, white | The setting is correct (GRBW) | Nothing |
+   | green, red, blue, white | Red and green are swapped | Set `PIXEL_TYPE` to `NEO_RGBW` |
+   | Wrong colours, LEDs not matching along the strip, or the white step looks like a mix of colours or stays dark | Not an RGBW strip in GRBW order | Find the order you saw and set `PIXEL_TYPE` to match (for a plain RGB strip, `NEO_GRB`) |
 
-Each chirp sends a ripple of light with a white sparkle from the body out to the wing tips. `RIPPLE_WHITE` sets how bright the sparkle is; 0 turns it off. If red and green look swapped, change `PIXEL_TYPE` to `NEO_RGBW`. If nothing moves for 20 s (for example the bat faces a sofa), it goes back to resting and stays quiet.
+   Once it's confirmed, set `STRIP_TEST 0` to skip the test at power-up.
 
-Everything you can tune is at the top of the sketch: `FAR_CM`, `NEAR_CM`, `BEEP_SLOW_MS`, `BEEP_FAST_MS`, pitches, brightness, `STILL_TIMEOUT_MS`, and `SOUND_ENABLED`.
+What the bat does once it's running is described in [How it behaves](#how-it-behaves) at the top.
 
 ## 7. Changing the case
 `cad/bat_enclosure.scad` is parametric. Open it in OpenSCAD and change the values at the top: `eye_x` if your sensor's eye spacing isn't 26 mm, `nano_w`, `strip_w`, the wing points, and so on. Then export a part:

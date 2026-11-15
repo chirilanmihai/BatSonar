@@ -11,7 +11,7 @@
   If something stands still in front of the bat (a sofa, a wall) for STILL_TIMEOUT_MS,
   the bat stops beeping and goes back to resting until something moves again.
 
-  Wiring (see BUILD_GUIDE.md):
+  Wiring (see README.md):
     D6  -> 330 ohm -> DIN of LEFT wing strip   (both strips on the same data pin:
     D6  -> 330 ohm -> DIN of RIGHT wing strip   they show the same picture, mirrored)
     D9  -> HC-SR04 TRIG
