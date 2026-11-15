@@ -55,6 +55,7 @@
 // For a plain RGB strip (WS2812B) use NEO_GRB.
 #define PIXEL_TYPE     (NEO_GRBW + NEO_KHZ800)
 #define RIPPLE_WHITE   60     // white chip flash on each chirp (0 = off)
+#define STRIP_TEST     1      // 1 = R, G, B, W test at power-up (1 s each); 0 = skip
 
 Adafruit_NeoPixel wing(LEDS_PER_WING, LED_PIN, PIXEL_TYPE);
 
@@ -120,6 +121,33 @@ void buzzerUpdate(unsigned long now) {
 #endif
 }
 
+// ---------------- strip type test ----------------
+// At power-up the whole strip shows RED, GREEN, BLUE, then WHITE, 1 second each.
+// What you should see with the right PIXEL_TYPE: red, green, blue, warm/neutral white.
+//   red and green swapped              -> use NEO_RGBW
+//   colours wrong / LEDs differ along
+//   the strip / white step looks like
+//   a mix of colours or stays dark     -> strip is not GRBW; tell me what you saw
+// The same is printed on the Serial Monitor (9600 baud).
+void stripTest() {
+  const uint8_t L = 100;   // test brightness, kept moderate for USB power
+  const char *names[4] = {"RED", "GREEN", "BLUE", "WHITE (white chip only)"};
+  const uint32_t cols[4] = {wing.Color(L, 0, 0, 0), wing.Color(0, L, 0, 0),
+                            wing.Color(0, 0, L, 0), wing.Color(0, 0, 0, L)};
+  Serial.begin(9600);
+  Serial.println(F("Strip test: R, G, B, W - 1 s each"));
+  for (uint8_t c = 0; c < 4; c++) {
+    Serial.print(F("Now showing: "));
+    Serial.println(names[c]);
+    wing.fill(cols[c]);
+    wing.show();
+    delay(1000);
+  }
+  wing.clear();
+  wing.show();
+  delay(300);
+}
+
 // ---------------- setup ----------------
 void setup() {
   pinMode(TRIG_PIN, OUTPUT);
@@ -129,6 +157,10 @@ void setup() {
   wing.begin();
   wing.clear();
   wing.show();
+
+#if STRIP_TEST
+  stripTest();
+#endif
 
   // "Hello": light runs out to the wing tips green, yellow, red, with three rising chirps
   const uint8_t hello[3][3] = {{0, 255, 0}, {255, 200, 0}, {255, 0, 0}};
