@@ -40,12 +40,12 @@ Brightness runs from 0 to 255; the code stops at 150 so the USB supply isn't ove
 Every chirp sends a **wave of light from the body out to the wing tips**. Each LED flashes brighter for a moment, one after the other, 30 ms apart, with a small **white sparkle** from the white chip. It looks like the sound flying out of the bat. Far away the ripples are slow and calm; up close they come so fast the wings seem to flicker.
 
 ### Touch: scratching and chirping off/on
-- **Scratch (any touch):** the bat is happy. The wings show a **flowing rainbow** for **4 seconds**, with a short **happy trill** (passive buzzer only, and only if chirping is on). Every new touch restarts the 4 s. (With a momentary module, `TOUCH_LATCHING 0`, holding also keeps it happy.) No chirps play during the rainbow; afterwards the bat carries on as before.
+- **Scratch (any touch):** the bat is happy. The wings show a **flowing rainbow** for **4 seconds**, with a short **happy trill** (passive buzzer only, and only if chirping is on). Keep touching and it stays happy for as long as you touch, plus 4 s. No chirps play during the rainbow; afterwards the bat carries on as before.
 - **Double-tap (exactly 2 quick taps):** turns **chirping off or on**.
   - Off: 2 **blue** flashes and 2 **low** beeps.
   - On: 2 **white** flashes and 2 **high** beeps.
   - The setting is **remembered after unplugging**. While chirping is off, the lights still work and the ripples keep the rhythm silently.
-- The 2 taps must come within 0.45 s of each other, followed by a 0.45 s pause. (Momentary module only: each tap must also be shorter than 0.4 s.) **Three or more quick taps count as scratching**, so a child scratching away won't mute the bat by accident.
+- A tap is a touch shorter than 0.4 s, and the 2 taps must come within 0.45 s of each other. **Three or more quick taps count as scratching**, so a child scratching away won't mute the bat by accident.
 
 ### Ignoring things that don't move
 If the distance stays within **8 cm** for **20 seconds**, the bat decides it's looking at furniture or a wall. It goes quiet and back to green breathing. As soon as something moves more than 8 cm, it wakes up again. A child who stands perfectly still in front of it for 20 s also sends it back to "sleep", so moving wakes it, which can become part of the game.
@@ -74,8 +74,7 @@ All of these are at the top of [BatSonar.ino](BatSonar.ino):
 | `RAINBOW_BRIGHT` / `RAINBOW_CYCLE_MS` | 110 / 1500 | Rainbow brightness / speed |
 | `HAPPY_SOUND` | 1 | 0 = no happy trill on a scratch |
 | `TAP_MAX_MS` / `DOUBLE_TAP_GAP_MS` | 400 / 450 | How quick a tap and a double-tap must be |
-| `TOUCH_LATCHING` | 1 | 1 = the touch module latches (its output flips on every touch and stays): every flip counts as one touch. 0 = momentary module (output on only while touched) |
-| `TOUCH_ACTIVE_HIGH` | 0 | Momentary modules only: 1 if the output goes HIGH while touched, 0 if it goes LOW |
+| `TOUCH_ACTIVE_HIGH` | 0 | 1 if the touch output goes HIGH while touched, 0 if it goes LOW. Wrong setting = the bat is happy all the time and calms down when touched |
 
 ---
 
@@ -167,7 +166,7 @@ Sizes: body 70 × 102 (with ears) × 52 mm deep; wingspan about 294 mm.
    - How to tell: connect the buzzer to 5V and GND for a moment. If it beeps on its own, it is active. If it only clicks, it is passive. Passive ones usually show a green circuit board underneath; active ones are sealed with black resin.
 
 5. **Strip type:** the sketch is set for an RGBW strip in GRBW order (`NEO_GRBW`). If far away looks red instead of green, red and green are swapped: set `PIXEL_TYPE` to `NEO_RGBW`. For a plain RGB strip use `NEO_GRB`.
-6. **Touch module type:** many 3-pin TTP223 boards **latch**: each touch flips the output and it stays there. The sketch is set for that (`TOUCH_LATCHING 1`). If yours is momentary (the output is on only while you touch), set `TOUCH_LATCHING 0`. On many boards, removing the solder bridge on pad **B** switches a latching module to momentary.
+6. **Touch module:** it must be **momentary**, meaning the output is on only while you touch. Some TTP223 boards come set to **latch** (each touch flips the output and it stays). That's set by a solder bridge on pad **B**; remove the bridge to make it momentary.
 
 What the bat does once it's running is described in [How it behaves](#how-it-behaves) at the top.
 

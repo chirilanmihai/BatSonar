@@ -44,13 +44,6 @@
 // (bat is "happy" all the time and calms down when touched), set this to 0.
 #define TOUCH_ACTIVE_HIGH 0
 
-// 1 = module LATCHES (toggle mode: OUT flips each time you touch and stays there).
-//     Every flip counts as one touch. Touch length can't be seen, so holding = one touch.
-//     TOUCH_ACTIVE_HIGH is then ignored.
-// 0 = momentary module (OUT is on only while touched).
-// Many TTP223 boards switch to momentary if you remove the solder bridge on pad "B".
-#define TOUCH_LATCHING    1
-
 // ---------------- behaviour (tune these) ----------------
 #define FAR_CM          100   // bat starts reacting closer than this (further = relaxed)
 #define NEAR_CM         25    // full red / fastest chirps at or below this
@@ -218,24 +211,6 @@ void toggleMute() {
   lastBeep = millis();
 }
 
-#if TOUCH_LATCHING
-// Latching module: every (debounced) change of OUT = one touch, i.e. one tap.
-void updateTouch(unsigned long now) {
-  bool raw = (digitalRead(TOUCH_PIN) == HIGH);
-  if (raw != touchRaw) { touchRaw = raw; touchRawChange = now; }
-  if (now - touchRawChange >= 15 && raw != touched) {      // 15 ms debounce
-    touched = raw;                                         // here: last stable OUT level
-    startHappy(now);                                       // every touch is a scratch
-    if (tapCount < 99) tapCount++;
-    lastRelease = now;
-  }
-  // a burst of touches is finished: exactly 2 quick touches -> chirping off / on
-  if (tapCount && now - lastRelease > DOUBLE_TAP_GAP_MS) {
-    if (tapCount == 2) toggleMute();
-    tapCount = 0;
-  }
-}
-#else
 void updateTouch(unsigned long now) {
   bool raw = (digitalRead(TOUCH_PIN) == HIGH) == (TOUCH_ACTIVE_HIGH == 1);
   if (raw != touchRaw) { touchRaw = raw; touchRawChange = now; }
@@ -258,16 +233,6 @@ void updateTouch(unsigned long now) {
     tapCount = 0;
   }
   if (tapCount && touched && now - touchStart >= TAP_MAX_MS) tapCount = 99;
-}
-#endif
-
-// "touched" in the sense of "someone is holding the button right now"
-bool holding() {
-#if TOUCH_LATCHING
-  return false;                  // a latching module can't tell
-#else
-  return touched;
-#endif
 }
 
 void updateTrill(unsigned long now) {
@@ -311,9 +276,6 @@ void setup() {
   wing.clear();
   wing.show();
 
-  // whatever the touch output is now is the starting point, not a touch
-  touchRaw = touched = (digitalRead(TOUCH_PIN) == HIGH) == (TOUCH_LATCHING || TOUCH_ACTIVE_HIGH == 1);
-  touchRawChange = millis();
 }
 
 // ---------------- main loop ----------------
@@ -323,7 +285,7 @@ void loop() {
   // 0. touch: scratch = happy rainbow, double-tap = chirping off/on
   updateTouch(now);
   updateTrill(now);
-  if (happy && (long)(now - happyUntil) >= 0 && !holding()) {
+  if (happy && (long)(now - happyUntil) >= 0 && !touched) {
     happy = false;
     lastBeep = now;               // start chirping calmly again
   }
