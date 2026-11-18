@@ -4,36 +4,49 @@
 
 A 3D-printed bat for children. Its "eyes" are an HC-SR04 ultrasonic sensor. As a child walks toward it, the glowing wings go **green → yellow → red** and the bat chirps faster and higher, like a real bat using echoes to find its way.
 
-Hardware: Arduino Nano v3 (mini USB), HC-SR04, 2 × 5 RGBW NeoPixels (60 LED/m), 12 mm buzzer. Powered only by the mini-USB cable.
+You can also **scratch the bat's head** (a touch button): it gets happy and shows a rainbow. A **double-tap** turns the chirping off or on.
+
+Hardware: Arduino Nano v3 (mini USB), HC-SR04, 2 × 5 RGBW NeoPixels (60 LED/m), 12 mm buzzer, TTP223 capacitive touch button. Powered only by the mini-USB cable.
 
 ## How it behaves
 
 ### At power-up
 1. **Strip test (4 s):** the whole strip shows red, green, blue, then white, 1 second each, so you can check the strip type (see [Software](#6-software)). Set `STRIP_TEST 0` to skip it.
-2. **"Hello" animation:** the light runs out to the wing tips three times, first green, then yellow, then red, with three rising chirps.
-3. Then the bat starts **resting**.
+2. **Rainbow (3.5 s):** the colours of the rainbow flow out along both wings.
+3. **"Hello" animation:** the light runs out to the wing tips three times, first green, then yellow, then red, with three rising chirps (silent if chirping is turned off).
+4. Then the bat starts **resting**.
+
+Don't touch the button while the bat powers up: the touch chip calibrates itself in the first moment.
 
 ### Resting (nobody around)
 - The wings **breathe slowly in green**: dim, a little brighter, dim again, over 4 seconds.
 - **No sound.**
-- It rests when nothing is closer than **2 m**. The sensor sees up to about 2.5 m, so anything further away counts as nobody there.
+- It rests when nothing is closer than **1 m**. Anything further away counts as nobody there.
 
 ### Someone approaching
 Both wings always show the same thing. As the child gets closer, the colour, brightness, chirp speed and chirp pitch all change smoothly together:
 
 | Distance | Colour | Brightness | Time between chirps | Pitch |
 |---|---|---|---|---|
-| just under 2 m | green | 70 | 0.9 s | 1800 Hz (low) |
-| 1.5 m | yellow-green | 93 | 0.67 s | 2370 Hz |
-| **1.1 m** | **yellow** | 110 | 0.49 s | 2800 Hz |
-| 75 cm | orange | 127 | 0.32 s | 3230 Hz |
-| 40 cm | red-orange | 143 | 0.16 s | 3630 Hz |
+| just under 1 m | green | 70 | 0.9 s | 1800 Hz (low) |
+| 80 cm | yellow-green | 91 | 0.68 s | 2330 Hz |
+| **62 cm** | **yellow** | 110 | 0.49 s | 2800 Hz |
+| 45 cm | orange | 129 | 0.31 s | 3270 Hz |
+| 33 cm | red-orange | 141 | 0.18 s | 3590 Hz |
 | **25 cm or less** | **red** | 150 | 0.09 s (about 11 chirps per second) | 3800 Hz (high) |
 
 Brightness runs from 0 to 255; the code stops at 150 so the USB supply isn't overloaded. Each chirp is a short 35 ms "tsk". With an active buzzer the pitch doesn't change, only the speed.
 
 ### The light ripple
 Every chirp sends a **wave of light from the body out to the wing tips**. Each LED flashes brighter for a moment, one after the other, 30 ms apart, with a small **white sparkle** from the white chip. It looks like the sound flying out of the bat. Far away the ripples are slow and calm; up close they come so fast the wings seem to flicker.
+
+### Touch: scratching and chirping off/on
+- **Scratch (any touch):** the bat is happy. The wings show a **flowing rainbow** for **4 seconds**, with a short **happy trill** (passive buzzer only, and only if chirping is on). Keep touching and it stays happy for as long as you touch, plus 4 s. No chirps play during the rainbow; afterwards the bat carries on as before.
+- **Double-tap (exactly 2 quick taps):** turns **chirping off or on**.
+  - Off: 2 **blue** flashes and 2 **low** beeps.
+  - On: 2 **white** flashes and 2 **high** beeps.
+  - The setting is **remembered after unplugging**. While chirping is off, the lights still work and the ripples keep the rhythm silently.
+- A tap is a touch shorter than 0.4 s, and the 2 taps must come within 0.45 s of each other. **Three or more quick taps count as scratching**, so a child scratching away won't mute the bat by accident.
 
 ### Ignoring things that don't move
 If the distance stays within **8 cm** for **20 seconds**, the bat decides it's looking at furniture or a wall. It goes quiet and back to green breathing. As soon as something moves more than 8 cm, it wakes up again. A child who stands perfectly still in front of it for 20 s also sends it back to "sleep", so moving wakes it, which can become part of the game.
@@ -42,14 +55,14 @@ If the distance stays within **8 cm** for **20 seconds**, the bat decides it's l
 - The sensor measures about **16 times per second**.
 - Each reading is the middle value of the last three, which throws away odd one-off echoes.
 - That value is then smoothed, so the colour glides instead of jumping.
-- When someone first appears, or leaves the 2 m range, the bat reacts **immediately**, with no fade.
+- When someone first appears, or leaves the 1 m range, the bat reacts **immediately**, with no fade.
 
 ### What you can tune
 All of these are at the top of [BatSonar.ino](BatSonar.ino):
 
 | Setting | Now | What it changes |
 |---|---|---|
-| `FAR_CM` / `NEAR_CM` | 200 / 25 | Where reacting starts / where it's fully red |
+| `FAR_CM` / `NEAR_CM` | 100 / 25 | Where reacting starts (further = relaxed) / where it's fully red |
 | `BEEP_SLOW_MS` / `BEEP_FAST_MS` | 900 / 90 | Chirp speed far away / close up |
 | `PITCH_LOW_HZ` / `PITCH_HIGH_HZ` | 1800 / 3800 | Chirp pitch range |
 | `CHIRP_MS` | 35 | Length of each chirp |
@@ -58,6 +71,12 @@ All of these are at the top of [BatSonar.ino](BatSonar.ino):
 | `STILL_TIMEOUT_MS` / `STILL_BAND_CM` | 20 s / 8 cm | When it decides nothing is moving |
 | `SOUND_ENABLED` | 1 | 0 = lights only, silent bat |
 | `STRIP_TEST` | 1 | 0 = skip the R/G/B/W test at power-up |
+| `START_RAINBOW_MS` | 3500 | Length of the rainbow at power-up |
+| `HAPPY_MS` | 4000 | How long the rainbow lasts after a scratch |
+| `RAINBOW_BRIGHT` / `RAINBOW_CYCLE_MS` | 110 / 1500 | Rainbow brightness / speed |
+| `HAPPY_SOUND` | 1 | 0 = no happy trill on a scratch |
+| `TAP_MAX_MS` / `DOUBLE_TAP_GAP_MS` | 400 / 450 | How quick a tap and a double-tap must be |
+| `TOUCH_ACTIVE_HIGH` | 1 | Set to 0 if the bat seems happy all the time and calms down when touched |
 
 ---
 
@@ -72,7 +91,8 @@ All of these are at the top of [BatSonar.ino](BatSonar.ino):
 | RGBW NeoPixel strip (SK6812, separate white chip), 60 LED/m | **10 LEDs** | Cut **two pieces of 5 LEDs** (about 83 mm each). For a plain RGB strip, set `PIXEL_TYPE` to `NEO_GRB` in the sketch. |
 | Buzzer, 12 mm round | 1 | Passive is best. Active also works (set one line in the code). |
 | Resistor 330 Ω | 2 | One in each LED data line. |
-| Resistor 150 Ω | 1 | Only for a passive buzzer. |
+| Resistor 220 Ω | 1 | Only for a passive buzzer. Keeps the pin current at about 20 mA. |
+| Capacitive touch button, 3 pins (TTP223, GND / VCC / OUT) | 1 | Works through 1–2 mm of plastic, so it can be glued inside the top of the head. |
 | Capacitor 470 µF, 6.3 V or higher | 1 | Recommended: across 5V/GND where the LED wires start. |
 | M3 × 10 screws (self-tapping into plastic) | 3 | Hold the lid on. |
 | M3 × 12 screws | 2 | Hold the sensor clamp. |
@@ -97,8 +117,12 @@ All of these are at the top of [BatSonar.ino](BatSonar.ino):
   HC-SR04 TRIG ┤ D9           │
   HC-SR04 ECHO ┤ D10          │
                 │              │
-  buzzer + ──[150Ω]── D3       │   (active buzzer: no resistor, + to D3)
+  buzzer + ──[220Ω]── D3       │   (active buzzer: no resistor, + to D3)
   buzzer − ─────────── GND     │
+                │              │
+  touch OUT ───────── D2       │
+  touch VCC ───────── 5V       │
+  touch GND ───────── GND      │
                 │              │
          ┌─[330Ω]── D6 ──[330Ω]─┐
          │      └──────────────┘ │
@@ -132,8 +156,9 @@ Sizes: body 70 × 102 (with ears) × 52 mm deep; wingspan about 294 mm.
 3. **Nano:** solder all wires first. Then slide the board in from the back, lying flat, components up, USB toward the back. Its front end goes into the two slotted pillars beside the buzzer.
 4. **Wings:** stick each 5-LED strip between the rails on a wing back plate (DIN end at the root, next to the tab). Pass the 3 wires through the tab. Put the back plate into the white shell; it rests on the inner ledge. Hold it with 3–4 dots of glue on the edge.
 5. Push each wing tab into the slot in the body side. Thread the wires inside and solder them to the Nano. When everything works, glue the tabs.
-6. **Lid:** the two fins with notches on the lid hold the USB end of the Nano. Fit the lid so the USB socket lines up with the lid's opening, then use 3 × M3 × 10 screws.
-7. Plug in USB. It stands on a table or shelf. If the cable tips it over, add rubber feet or a coin glued inside the bottom.
+6. **Touch button:** there's no holder in the case. Glue the module flat against the **inside of the top wall**, between the ears, with its touch pad facing the plastic (hot glue or double-sided tape). You can then "scratch the bat's head" through the 2 mm wall. If it reacts poorly through the plastic, mount it where the wall is thinner or glue it to the outside instead.
+7. **Lid:** the two fins with notches on the lid hold the USB end of the Nano. Fit the lid so the USB socket lines up with the lid's opening, then use 3 × M3 × 10 screws.
+8. Plug in USB. It stands on a table or shelf. If the cable tips it over, add rubber feet or a coin glued inside the bottom.
 
 ## 6. Software
 1. In the Arduino IDE, install the **Adafruit NeoPixel** library (Library Manager). You already have it.
