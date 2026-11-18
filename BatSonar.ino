@@ -42,7 +42,14 @@
 
 // TTP223 default: OUT goes HIGH while touched. If your module is the other way round
 // (bat is "happy" all the time and calms down when touched), set this to 0.
-#define TOUCH_ACTIVE_HIGH 1
+#define TOUCH_ACTIVE_HIGH 0
+
+// 1 = module LATCHES (toggle mode: OUT flips each time you touch and stays there).
+//     Every flip counts as one touch. Touch length can't be seen, so holding = one touch.
+//     TOUCH_ACTIVE_HIGH is then ignored.
+// 0 = momentary module (OUT is on only while touched).
+// Many TTP223 boards switch to momentary if you remove the solder bridge on pad "B".
+#define TOUCH_LATCHING    1
 
 // ---------------- behaviour (tune these) ----------------
 #define FAR_CM          100   // bat starts reacting closer than this (further = relaxed)
@@ -74,7 +81,6 @@
 // For a plain RGB strip (WS2812B) use NEO_GRB.
 #define PIXEL_TYPE     (NEO_GRBW + NEO_KHZ800)
 #define RIPPLE_WHITE   60     // white chip flash on each chirp (0 = off)
-#define STRIP_TEST     1      // 1 = R, G, B, W test at power-up (1 s each); 0 = skip
 
 #define EEPROM_MUTE_ADDR 0    // where "chirping off" is remembered
 #define EEPROM_MUTED     0xA5 // value meaning "muted" (anything else = sound on)
@@ -183,33 +189,6 @@ void drawRainbow(unsigned long now) {
   wing.show();
 }
 
-// ---------------- strip type test ----------------
-// At power-up the whole strip shows RED, GREEN, BLUE, then WHITE, 1 second each.
-// What you should see with the right PIXEL_TYPE: red, green, blue, warm/neutral white.
-//   red and green swapped              -> use NEO_RGBW
-//   colours wrong / LEDs differ along
-//   the strip / white step looks like
-//   a mix of colours or stays dark     -> strip is not GRBW; tell me what you saw
-// The same is printed on the Serial Monitor (9600 baud).
-void stripTest() {
-  const uint8_t L = 100;   // test brightness, kept moderate for USB power
-  const char *names[4] = {"RED", "GREEN", "BLUE", "WHITE (white chip only)"};
-  const uint32_t cols[4] = {wing.Color(L, 0, 0, 0), wing.Color(0, L, 0, 0),
-                            wing.Color(0, 0, L, 0), wing.Color(0, 0, 0, L)};
-  Serial.begin(9600);
-  Serial.println(F("Strip test: R, G, B, W - 1 s each"));
-  for (uint8_t c = 0; c < 4; c++) {
-    Serial.print(F("Now showing: "));
-    Serial.println(names[c]);
-    wing.fill(cols[c]);
-    wing.show();
-    delay(1000);
-  }
-  wing.clear();
-  wing.show();
-  delay(300);
-}
-
 // ---------------- touch ----------------
 void startHappy(unsigned long now) {
   if (!happy) {
@@ -239,6 +218,24 @@ void toggleMute() {
   lastBeep = millis();
 }
 
+#if TOUCH_LATCHING
+// Latching module: every (debounced) change of OUT = one touch, i.e. one tap.
+void updateTouch(unsigned long now) {
+  bool raw = (digitalRead(TOUCH_PIN) == HIGH);
+  if (raw != touchRaw) { touchRaw = raw; touchRawChange = now; }
+  if (now - touchRawChange >= 15 && raw != touched) {      // 15 ms debounce
+    touched = raw;                                         // here: last stable OUT level
+    startHappy(now);                                       // every touch is a scratch
+    if (tapCount < 99) tapCount++;
+    lastRelease = now;
+  }
+  // a burst of touches is finished: exactly 2 quick touches -> chirping off / on
+  if (tapCount && now - lastRelease > DOUBLE_TAP_GAP_MS) {
+    if (tapCount == 2) toggleMute();
+    tapCount = 0;
+  }
+}
+#else
 void updateTouch(unsigned long now) {
   bool raw = (digitalRead(TOUCH_PIN) == HIGH) == (TOUCH_ACTIVE_HIGH == 1);
   if (raw != touchRaw) { touchRaw = raw; touchRawChange = now; }
@@ -262,6 +259,16 @@ void updateTouch(unsigned long now) {
   }
   if (tapCount && touched && now - touchStart >= TAP_MAX_MS) tapCount = 99;
 }
+#endif
+
+// "touched" in the sense of "someone is holding the button right now"
+bool holding() {
+#if TOUCH_LATCHING
+  return false;                  // a latching module can't tell
+#else
+  return touched;
+#endif
+}
 
 void updateTrill(unsigned long now) {
   if (trillIdx >= TRILL_LEN || (long)(now - trillNext) < 0) return;
@@ -281,10 +288,6 @@ void setup() {
   wing.begin();
   wing.clear();
   wing.show();
-
-#if STRIP_TEST
-  stripTest();
-#endif
 
   // rainbow
   unsigned long t0 = millis();
@@ -307,6 +310,10 @@ void setup() {
   }
   wing.clear();
   wing.show();
+
+  // whatever the touch output is now is the starting point, not a touch
+  touchRaw = touched = (digitalRead(TOUCH_PIN) == HIGH) == (TOUCH_LATCHING || TOUCH_ACTIVE_HIGH == 1);
+  touchRawChange = millis();
 }
 
 // ---------------- main loop ----------------
@@ -316,7 +323,7 @@ void loop() {
   // 0. touch: scratch = happy rainbow, double-tap = chirping off/on
   updateTouch(now);
   updateTrill(now);
-  if (happy && (long)(now - happyUntil) >= 0 && !touched) {
+  if (happy && (long)(now - happyUntil) >= 0 && !holding()) {
     happy = false;
     lastBeep = now;               // start chirping calmly again
   }
