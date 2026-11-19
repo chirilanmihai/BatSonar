@@ -1,5 +1,7 @@
 # The Bat That Sees With Sound
 
+🇷🇴 [Citește în română](README.ro.md)
+
 ![front](cad/preview_front.png)
 
 A 3D-printed bat for children. Its "eyes" are an HC-SR04 ultrasonic sensor. As a child walks toward it, the glowing wings go **green → yellow → red** and the bat chirps faster and higher, like a real bat using echoes to find its way.
@@ -198,6 +200,8 @@ Sizes: body 70 × 102 (with ears) × 52 mm deep; wingspan about 294 mm.
 6. **Touch button:** there's no holder in the case. Glue the module flat against the **inside of the top wall**, between the ears, with its touch pad facing the plastic (hot glue or double-sided tape). You can then "scratch the bat's head" through the 2 mm wall. If it reacts poorly through the plastic, mount it where the wall is thinner or glue it to the outside instead.
 7. **Lid:** the two fins with notches on the lid hold the USB end of the Nano. Fit the lid so the USB socket lines up with the lid's opening, then use 3 × M3 × 10 screws.
 8. Plug in USB. It stands on a table or shelf. If the cable tips it over, add rubber feet or a coin glued inside the bottom.
+
+**Note:** the wing back-plate files are named the wrong way round: `wing_back_R.stl` fits the **left** wing, and `wing_back_L.stl` fits the **right** wing.
 
 ## 6. Software
 1. In the Arduino IDE, install the **Adafruit NeoPixel** library (Library Manager). You already have it.
