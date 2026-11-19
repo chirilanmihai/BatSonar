@@ -6,75 +6,116 @@ A 3D-printed bat for children. Its "eyes" are an HC-SR04 ultrasonic sensor. As a
 
 You can also **scratch the bat's head** (a touch button): it gets happy and shows a rainbow. A **double-tap** turns the chirping off or on.
 
+The bat has a second mood: the **scared bat**. He is scared when he's alone, calms down when someone comes close, and doesn't like being scratched. **Six quick taps** switch between the two moods.
+
 Hardware: Arduino Nano v3 (mini USB), HC-SR04, 2 × 5 RGBW NeoPixels (60 LED/m), 12 mm buzzer, TTP223 capacitive touch button. Powered only by the mini-USB cable.
 
 ## How it behaves
 
 ### At power-up
 1. **Rainbow (3.5 s):** the colours of the rainbow flow out along both wings.
-2. **"Hello" animation:** the light runs out to the wing tips three times, first green, then yellow, then red, with three rising chirps (silent if chirping is turned off).
-3. Then the bat starts **resting**.
+2. **"Hello" animation:** the light runs out to the wing tips three times, with three rising chirps (silent if chirping is turned off). Normal bat: green, yellow, red. Scared bat: blue, green, yellow, so you can tell the mood at power-up.
+3. Then the bat starts.
 
 Don't touch the button while the bat powers up: the touch chip calibrates itself in the first moment.
+
+### The two moods
+- `#define START_SCARED 0` at the very top of the sketch: **0 = normal bat**, **1 = scared bat**.
+- **Six quick taps** switch the mood. You'll see a **purple swirl** running out to the wing tips twice, with a **rising** tune (now scared) or a **falling** tune (now normal). The tune plays even when chirping is off, so you know it worked.
+- The mood is **remembered after unplugging**. If you change `START_SCARED` and upload again, the new value wins over the remembered mood.
+
+## Normal bat
 
 ### Resting (nobody around)
 - The wings **breathe slowly in green**: dim, a little brighter, dim again, over 4 seconds.
 - **No sound.**
-- It rests when nothing is closer than **1 m**. Anything further away counts as nobody there.
+- It rests when nothing is closer than **2 m**. Anything further away counts as nobody there.
 
 ### Someone approaching
 Both wings always show the same thing. As the child gets closer, the colour, brightness, chirp speed and chirp pitch all change smoothly together:
 
 | Distance | Colour | Brightness | Time between chirps | Pitch |
 |---|---|---|---|---|
-| just under 1 m | green | 70 | 0.9 s | 1800 Hz (low) |
-| 80 cm | yellow-green | 91 | 0.68 s | 2330 Hz |
-| **62 cm** | **yellow** | 110 | 0.49 s | 2800 Hz |
-| 45 cm | orange | 129 | 0.31 s | 3270 Hz |
-| 33 cm | red-orange | 141 | 0.18 s | 3590 Hz |
+| just under 2 m | green | 70 | 0.9 s | 1800 Hz (low) |
+| 1.5 m | yellow-green | 93 | 0.67 s | 2370 Hz |
+| **1.1 m** | **yellow** | 110 | 0.49 s | 2800 Hz |
+| 75 cm | orange | 127 | 0.32 s | 3230 Hz |
+| 40 cm | red-orange | 143 | 0.16 s | 3630 Hz |
 | **25 cm or less** | **red** | 150 | 0.09 s (about 11 chirps per second) | 3800 Hz (high) |
 
 Brightness runs from 0 to 255; the code stops at 150 so the USB supply isn't overloaded. Each chirp is a short 35 ms "tsk". With an active buzzer the pitch doesn't change, only the speed.
 
-### The light ripple
-Every chirp sends a **wave of light from the body out to the wing tips**. Each LED flashes brighter for a moment, one after the other, 30 ms apart, with a small **white sparkle** from the white chip. It looks like the sound flying out of the bat. Far away the ripples are slow and calm; up close they come so fast the wings seem to flicker.
+### Scratch
+The bat is happy: the wings show a **flowing rainbow** with a short **happy trill** (passive buzzer only, and only if chirping is on). With `HAPPY_MS 0` the rainbow lasts exactly as long as the touch. Set it to e.g. `4000` to keep it going 4 s after you let go. No chirps play during the rainbow.
 
-### Touch: scratching and chirping off/on
-- **Scratch (any touch):** the bat is happy. The wings show a **flowing rainbow** for **4 seconds**, with a short **happy trill** (passive buzzer only, and only if chirping is on). Keep touching and it stays happy for as long as you touch, plus 4 s. No chirps play during the rainbow; afterwards the bat carries on as before.
+## Scared bat
+
+### Alone (nobody within 2 m)
+- **Cold blue wings that tremble**: every LED flickers nervously.
+- **Fast, high whimpering chirps** (about 7 per second) with a nervous wobble in the pitch.
+
+### Someone approaching: he calms down
+
+| Distance | Colour | Brightness | Time between chirps | Pitch |
+|---|---|---|---|---|
+| nobody / over 2 m | **blue**, trembling | 120 | 0.15 s | about 3800 Hz (high, wobbly) |
+| 1.5 m | blue-green, trembling less | 103 | 0.51 s | 3230 Hz |
+| **1.1 m** | **green** | 90 | 0.78 s | 2800 Hz |
+| 75 cm | yellow-green, almost steady | 77 | 1.04 s | 2370 Hz |
+| **25 cm or less** | **soft calm yellow**, steady | 60 | 1.4 s | 1800 Hz (low) |
+
+### Alone for a long time
+After **20 s** alone with nothing moving, he gets **tired**: dim blue breathing with a slight tremble, **silent**. Anything moving within 2 m wakes him (scared again). If someone stays close but doesn't move for 20 s, he relaxes completely: calm breathing in his current colour, silent.
+
+### Scratch: he doesn't like it
+While touched, the wings **flash red and purple** quickly, and he **grumbles**: a low, falling "grrr" (passive buzzer only, and only if chirping is on), repeated for as long as you keep scratching. With `HAPPY_MS 0` it stops the moment you let go.
+
+## In both moods
+
+### The light ripple
+Every chirp sends a **wave of light from the body out to the wing tips**. Each LED flashes brighter for a moment, one after the other, 30 ms apart, with a small **white sparkle** from the white chip. It looks like the sound flying out of the bat.
+
+### Taps
 - **Double-tap (exactly 2 quick taps):** turns **chirping off or on**.
   - Off: 2 **blue** flashes and 2 **low** beeps.
   - On: 2 **white** flashes and 2 **high** beeps.
   - The setting is **remembered after unplugging**. While chirping is off, the lights still work and the ripples keep the rhythm silently.
-- A tap is a touch shorter than 0.4 s, and the 2 taps must come within 0.45 s of each other. **Three or more quick taps count as scratching**, so a child scratching away won't mute the bat by accident.
+- **Exactly 6 quick taps:** switch **normal ↔ scared** (see [The two moods](#the-two-moods)).
+- A tap is a touch shorter than 0.4 s, and the taps must come within 0.45 s of each other. **Any other number of quick taps (3, 4, 5, 7 or more) counts as scratching**, so a child scratching away won't change anything by accident.
 
 ### Ignoring things that don't move
-If the distance stays within **8 cm** for **20 seconds**, the bat decides it's looking at furniture or a wall. It goes quiet and back to green breathing. As soon as something moves more than 8 cm, it wakes up again. A child who stands perfectly still in front of it for 20 s also sends it back to "sleep", so moving wakes it, which can become part of the game.
+If the distance stays within **8 cm** for **20 seconds**, the bat decides it's looking at furniture or a wall and goes quiet. The normal bat goes back to green breathing; the scared bat gets tired (alone) or relaxed (someone near). As soon as something moves more than 8 cm, he wakes up again.
 
 ### Smoothing the readings
 - The sensor measures about **16 times per second**.
 - Each reading is the middle value of the last three, which throws away odd one-off echoes.
 - That value is then smoothed, so the colour glides instead of jumping.
-- When someone first appears, or leaves the 1 m range, the bat reacts **immediately**, with no fade.
+- When someone first appears, or leaves the 2 m range, the bat reacts **immediately**, with no fade.
 
 ### What you can tune
 All of these are at the top of [BatSonar.ino](BatSonar.ino):
 
 | Setting | Now | What it changes |
 |---|---|---|
-| `FAR_CM` / `NEAR_CM` | 100 / 25 | Where reacting starts (further = relaxed) / where it's fully red |
-| `BEEP_SLOW_MS` / `BEEP_FAST_MS` | 900 / 90 | Chirp speed far away / close up |
+| `START_SCARED` | 0 | Mood: 0 = normal bat, 1 = scared bat |
+| `FAR_CM` / `NEAR_CM` | 200 / 25 | Where reacting starts (further = nobody there) / strongest reaction |
+| `BEEP_SLOW_MS` / `BEEP_FAST_MS` | 900 / 90 | Normal bat: chirp speed far away / close up |
+| `SCARED_BEEP_FAST_MS` / `SCARED_BEEP_SLOW_MS` | 150 / 1400 | Scared bat: chirp speed alone / close up |
 | `PITCH_LOW_HZ` / `PITCH_HIGH_HZ` | 1800 / 3800 | Chirp pitch range |
 | `CHIRP_MS` | 35 | Length of each chirp |
-| `BRIGHT_MIN` / `BRIGHT_MAX` / `BRIGHT_IDLE_MAX` | 70 / 150 / 40 | Brightness (keep the max at 200 or less) |
+| `BRIGHT_MIN` / `BRIGHT_MAX` / `BRIGHT_IDLE_MAX` | 70 / 150 / 40 | Normal bat brightness, and resting brightness (keep the max at 200 or less) |
+| `SCARED_BRIGHT` / `CALM_BRIGHT` | 120 / 60 | Scared bat brightness when most scared / calm |
+| `TREMBLE` | 50 | How much the scared wings flicker (0 = steady) |
 | `RIPPLE_WHITE` | 60 | White sparkle strength (0 = off) |
 | `STILL_TIMEOUT_MS` / `STILL_BAND_CM` | 20 s / 8 cm | When it decides nothing is moving |
 | `SOUND_ENABLED` | 1 | 0 = lights only, silent bat |
 | `START_RAINBOW_MS` | 3500 | Length of the rainbow at power-up |
-| `HAPPY_MS` | 4000 | How long the rainbow lasts after a scratch |
+| `HAPPY_MS` | 0 | How long the scratch reaction lasts after the touch ends (0 = only while touched) |
 | `RAINBOW_BRIGHT` / `RAINBOW_CYCLE_MS` | 110 / 1500 | Rainbow brightness / speed |
-| `HAPPY_SOUND` | 1 | 0 = no happy trill on a scratch |
-| `TAP_MAX_MS` / `DOUBLE_TAP_GAP_MS` | 400 / 450 | How quick a tap and a double-tap must be |
-| `TOUCH_ACTIVE_HIGH` | 0 | 1 if the touch output goes HIGH while touched, 0 if it goes LOW. Wrong setting = the bat is happy all the time and calms down when touched |
+| `HAPPY_SOUND` | 1 | 0 = no trill / grumble on a scratch |
+| `TAP_MAX_MS` / `DOUBLE_TAP_GAP_MS` | 400 / 450 | How quick a tap must be / how close together the taps must be |
+| `TAPS_MUTE` / `TAPS_MOOD` | 2 / 6 | How many taps turn chirping off/on / switch the mood |
+| `TOUCH_ACTIVE_HIGH` | 1 | 1 if the touch output goes HIGH while touched, 0 if it goes LOW. Wrong setting = the bat reacts all the time and calms down when touched |
 
 ---
 
